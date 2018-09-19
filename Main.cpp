@@ -3,22 +3,104 @@
 
 # include "SceneManager2.cpp"
 
+struct GameData
+{
+    Font font = Font(50);
+
+    int32 score = 0;
+};
+
+using MyApp = SceneManager<String, GameData>;
+
+struct Title : MyApp::Scene
+{
+    Title(const InitData& init)
+        : IScene(init)
+    {
+        Print << getState();
+    }
+
+    void update() override
+    {
+        if (MouseL.down())
+        {
+            changeScene(U"Game", 2s);
+        }
+    }
+
+    void draw() const override
+    {
+        getData().font(U"Title").drawAt(Window::BaseCenter());
+    }
+};
+
+struct Game : MyApp::Scene
+{
+    Game(const InitData& init)
+        : IScene(init)
+    {
+        Print << getState();
+
+        getData().score = 0;
+    }
+
+    void update() override
+    {
+        if (MouseL.down())
+        {
+            changeScene(U"Result", 2s);
+        }
+
+        ++getData().score;
+    }
+
+    void draw() const override
+    {
+        getData().font(U"Game").drawAt(Window::BaseCenter());
+
+        getData().font(getData().score).drawAt(Window::BaseCenter().movedBy(0, 60));
+    }
+};
+
+struct Result : MyApp::Scene
+{
+    Result(const InitData& init)
+        : IScene(init)
+    {
+        Print << getState();
+    }
+
+    void update() override
+    {
+        if (MouseL.down())
+        {
+            changeScene(U"Title", 2000);
+        }
+    }
+
+    void draw() const override
+    {
+        getData().font(U"Result").drawAt(Window::BaseCenter());
+
+        getData().font(getData().score).drawAt(Window::BaseCenter().movedBy(0, 60));
+    }
+};
+
 void Main()
 {
-	Graphics::SetBackground(ColorF(0.8, 0.9, 1.0));
+    const auto p = MakeShared<GameData>();
 
-	const Font font(50);
+    MyApp manager;
+    manager
+        .add<Title>(U"Title")
+        .add<Game>(U"Game")
+        .add<Result>(U"Result");
 
-	const Texture textureCat(Emoji(U"🐈"), TextureDesc::Mipped);
-
-	while (System::Update())
-	{
-		font(U"Hello, Siv3D!🐣").drawAt(Window::Center(), Palette::Black);
-
-		font(Cursor::Pos()).draw(20, 400, ColorF(0.6));
-
-		textureCat.resized(80).draw(540, 380);
-
-		Circle(Cursor::Pos(), 60).draw(ColorF(1, 0, 0, 0.5));
-	}
+    while (System::Update())
+    {
+        if (!manager.update())
+        {
+            break;
+        }
+    }
 }
